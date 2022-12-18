@@ -1,0 +1,86 @@
+#1
+select distinct  airplanes.number
+from airplanes, airlines, airlines_has_airplanes ar
+where ar.airplanes_id=airplanes.id AND ar.airlines_id=airlines.id
+AND airplanes.manufacturer="Airbus" AND airlines.name="Lufthansa";
+
+#2
+select distinct airlines.name
+from airlines, routes, airports s, airports d
+where s.id=routes.source_id AND d.id= routes.destination_id AND routes.airlines_id= airlines.id AND s.city="Athens" AND d.city="Prague";
+
+#3
+select COUNT(DISTINCT passengers.id) AS number
+from passengers, flights, flights_has_passengers flpa, routes, airlines
+where flpa.flights_id=flights.id AND flpa.passengers_id=passengers.id AND routes.id=flights.routes_id AND airlines.id=routes.airlines_id
+AND flights.date="2012-02-19" AND airlines.name="Aegean Airlines";
+
+#4
+select "yes" AS Result where exists(
+select distinct flights.id
+from routes,airports s,airports d,airlines,flights
+where routes.airlines_id=airlines.id AND flights.routes_id=routes.id
+AND airlines.name="Olympic Airways" AND flights.date="2014-12-12" AND routes.source_id=s.id AND routes.destination_id=d.id
+AND s.name="Athens El. Venizelos" AND d.name="London Gatwick" )
+union
+select "no" AS Result where not exists(
+select distinct flights.id
+from routes,airports s,airports d,airlines,flights
+where routes.airlines_id=airlines.id AND flights.routes_id=routes.id
+AND airlines.name="Olympic Airways" AND flights.date="2014-12-12" AND routes.source_id=s.id AND routes.destination_id=d.id
+AND s.name="Athens El. Venizelos" AND d.name="London Gatwick");
+
+#5
+select AVG ( (2022-passengers.year_of_birth)) AS age
+from passengers,airports,routes,flights,flights_has_passengers flpa
+where routes.destination_id=airports.id AND  routes.id=flights.routes_id
+AND flpa.flights_id=flights.id AND flpa.passengers_id=passengers.id
+AND airports.city="Berlin";
+
+#6
+Select passengers.name, passengers.surname
+from passengers , airplanes, flights, flights_has_passengers flpa
+where  flpa.flights_id=flights.id AND flpa.passengers_id=passengers.id AND airplanes.id=flights.airplanes_id
+group by passengers.id
+having count(distinct airplanes.id)=1;
+
+#7
+select s.city AS "from", d.city AS "to"
+from airports s, airports d,routes,flights,passengers,flights_has_passengers flpa
+where s.id != d.id AND routes.source_id=s.id AND routes.destination_id=d.id AND flights.routes_id=routes.id
+AND flpa.flights_id=flights.id AND flpa.passengers_id=passengers.id AND flights.date>="2010-03-01"AND flights.date<="2014-07-17"
+group by flights.id
+having count(flpa.passengers_id)>5;
+
+#8
+select airlines.name, airlines.code, count(routes.id)/4 AS num
+from airlines, routes, airplanes, airlines_has_airplanes a
+where a.airlines_id=airlines.id AND a.airplanes_id=airplanes.id AND routes.airlines_id=airlines.id
+group by airlines.id
+having count(distinct a.airplanes_id)=4;
+
+#9
+select passengers.name, passengers.surname
+from passengers,airlines,flights_has_passengers flpa,flights,routes
+where  flpa.flights_id=flights.id AND flpa.passengers_id=passengers.id AND routes.airlines_id=airlines.id AND flights.routes_id=routes.id
+group by flpa.passengers_id
+having count(distinct airlines.id) IN
+(select count(distinct airlines.id)
+from passengers,airlines,flights_has_passengers flpa,flights,routes
+where  flpa.flights_id=flights.id AND flpa.passengers_id=passengers.id AND routes.airlines_id=airlines.id AND flights.routes_id=routes.id
+AND airlines.active="Y");
+
+#10 (the first part of the union doesn't work for some reason)
+select  passengers.name, passengers.surname
+from passengers,flights,flights_has_passengers flpa
+where flpa.passengers_id=passengers.id AND flpa.flights_id=flights.id AND not exists(
+select *
+from flights,airlines,routes
+where routes.airlines_id=airlines.id AND flights.routes_id=routes.id AND airlines.name<>"Aegean Airlines")
+UNION
+select passengers.name, passengers.surname
+from passengers,airlines,flights,flights_has_passengers flpa
+where flpa.flights_id=flights.id AND flpa.passengers_id=passengers.id
+AND flights.date>="2011-01-02" AND flights.date<="2013-12-31"
+group by flpa.passengers_id
+having count( distinct flpa.flights_id)>1;
